@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# R session files
+.Rhistory
+.RData
+.Rproj.user/
+*.rds
+*.RData
+
+# Data (restricted / not distributed)
+16S_reprocess/
+sample_metadata.tsv
+*.qza
+*.qzv
+*.xlsx
+
+# Generated outputs
+*.pdf
+*.png
+*.svg
+*.docx
