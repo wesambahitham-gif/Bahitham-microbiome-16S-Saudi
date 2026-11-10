@@ -1,0 +1,2 @@
+SampleID	Status	Gender	Age	BMI	ALT	AST	ALP	GGT	Albumin	Bili_T	Platelet	INR	AFP	Glu_R	Hgb_A1C	TG	HDL	LDL	Creatinine	Sodium	ChildPugh_Class	Steatosis	Fibrosis	Causes_of_Diseases	Metformin	Insulin	Sulfonylurea_Use	DPP4_Inhibitor_Use	SGLT2_Inhibitor_Use	GLP1_RA_Use	Statin_Use	PPI_Use	Rifaximin_Use	Lactulose_Use	antihypertensive	Antibiotic_Use_Last3mo
+#example	Healthy|NAFLD|Cirrhosis|HCC	Male|Female	years	kg/m2	U/L	U/L	U/L	U/L	g/L	umol/L	10^9/L	ratio	ng/mL	mmol/L	%	mmol/L	mmol/L	mmol/L	umol/L	mmol/L	A|B|C	S0-S3	F0-F4	metabolic|viral	0|1	0|1	0|1	0|1	0|1	0|1	0|1	0|1	0|1	0|1	0|1	0|1
