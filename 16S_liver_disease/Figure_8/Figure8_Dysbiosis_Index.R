@@ -101,7 +101,7 @@ cat("All input files located.\n\n")
 
 cat("Loading dysbiosis data...\n")
 
-# Dysbiosis scores (from PCA analysis)
+# Dysbiosis scores (from PCA 16S_liver_disease)
 pca_scores <- read.csv(file.path(dysbiosis_dir, "Dysbiosis_Index_Scores.csv"))
 pca_scores$Status <- factor(gsub("^NAFLD$", "MASLD", pca_scores$Status), levels = c("Healthy", "MASLD", "Cirrhosis", "HCC"))
 

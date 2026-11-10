@@ -45,7 +45,7 @@ suppressMessages({
 # ============================================================================
 
 # Paths are RELATIVE to this script's folder (outputs are saved here)
-#   script : Desktop/Reviewers/Figure_5/
+#   script : 16S_liver_disease/Figure_5/
 #   data   : Desktop/16S_reprocess/qiime2_analysis_v2/
 get_script_dir <- function() {
   args <- commandArgs(trailingOnly = FALSE)
@@ -78,7 +78,7 @@ if (length(missing) > 0) {
   stop("Missing input files:\n  ",
        paste(names(missing), missing, sep = ": ", collapse = "\n  "),
        "\n\nWorking directory: ", getwd(),
-       "\nSave this script in Desktop/Reviewers/Figure_5/ and click Source.")
+       "\nSave this script in 16S_liver_disease/Figure_5/ and click Source.")
 }
 cat("All input files located.\n\n")
 

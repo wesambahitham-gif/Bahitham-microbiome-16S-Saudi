@@ -7,10 +7,10 @@
 #   Table 1: Clinical and demographic characteristics by disease group
 #   Table 2: Global PERMANOVA (unadjusted and adjusted for 11 covariates)
 #
-# Run from Desktop/Reviewers/Main_Tables (any folder under Desktop works):
+# Run from 16S_liver_disease/Main_Tables (any folder under Desktop works):
 #   - metadata and distance files are found in Desktop/16S_reprocess
 #   - Table 2 reuses Figure4_Confounder_PERMANOVA.R output
-#     (PERMANOVA_results_for_supplementary.RData, found under Desktop/Reviewers)
+#     (PERMANOVA_results_for_supplementary.RData, found under 16S_liver_disease)
 #     so the Bray-Curtis / UniFrac values are IDENTICAL to Figure 4;
 #     Jaccard (not in Figure 4) is computed here with the same model.
 # Outputs (this script's folder):
@@ -44,12 +44,12 @@ find_proj_dir <- function(name = "16S_reprocess") {
   stop("Could not find a '", name, "' folder above ", getwd())
 }
 PROJ_DIR      <- find_proj_dir()                                   # Desktop/16S_reprocess
-REVIEWERS_DIR <- file.path(dirname(PROJ_DIR), "Reviewers")         # Desktop/Reviewers
+ANALYSIS_DIR <- dirname(getwd())         # 16S_liver_disease
 METADATA_FILE <- file.path(PROJ_DIR, "sample_metadata.tsv")
 JACCARD_FILE  <- file.path(PROJ_DIR, "qiime2_analysis_v2", "Beta_diversity", "Jaccard", "Jaccardraw_data.tsv")
-rd <- list.files(REVIEWERS_DIR, pattern = "^PERMANOVA_results_for_supplementary\\.RData$", recursive = TRUE, full.names = TRUE)
+rd <- list.files(ANALYSIS_DIR, pattern = "^PERMANOVA_results_for_supplementary\\.RData$", recursive = TRUE, full.names = TRUE)
 RDATA_FILE    <- if (length(rd)) rd[which.max(file.mtime(rd))] else NA
-OUTPUT_DIR    <- file.path(REVIEWERS_DIR, "Main_Tables")             # Desktop/Reviewers/Main_Tables
+OUTPUT_DIR    <- file.path(ANALYSIS_DIR, "Main_Tables")             # 16S_liver_disease/Main_Tables
 if (!dir.exists(OUTPUT_DIR)) dir.create(OUTPUT_DIR, recursive = TRUE)
 OUT_T1 <- file.path(OUTPUT_DIR, "Table1_Clinical_Characteristics.docx")
 OUT_T2 <- file.path(OUTPUT_DIR, "Table2_PERMANOVA.docx")
@@ -57,7 +57,7 @@ GROUP_ORDER <- c("Healthy", "MASLD", "Cirrhosis", "HCC")
 N_PERM <- 999
 
 for (f in c(METADATA_FILE, JACCARD_FILE)) if (!file.exists(f)) stop("Input not found: ", f)
-if (is.na(RDATA_FILE)) stop("PERMANOVA_results_for_supplementary.RData not found under ", REVIEWERS_DIR,
+if (is.na(RDATA_FILE)) stop("PERMANOVA_results_for_supplementary.RData not found under ", ANALYSIS_DIR,
                             "\nRun Figure4_Confounder_PERMANOVA.R first.")
 cat("Metadata :", METADATA_FILE, "\nFigure 4 :", RDATA_FILE, "\nJaccard  :", JACCARD_FILE, "\n\n")
 

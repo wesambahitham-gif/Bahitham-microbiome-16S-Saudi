@@ -93,7 +93,7 @@ TREE_FILE       <- file.path(QIIME_DIR, "revision_exports/tree/tree.nwk")
 DADA2_STATS     <- file.path(QIIME_DIR, "revision_exports/dada2_stats/stats.tsv")
 
 # Output folder for ALL revision results
-REV_DIR <- file.path(dirname(BASE_DIR), "Reviewers", "Supp_Analyses")   # Desktop/Reviewers/Supp_Analyses (read by Supp Fig S3 + Tables)
+REV_DIR <- file.path(dirname(getwd()), "Supp_Analyses")   # 16S_liver_disease/Supp_Analyses (read by Supp Fig S3 + Tables)
 dir.create(REV_DIR, showWarnings = FALSE, recursive = TRUE)
 
 BATCH_MAP_FILE <- file.path(REV_DIR, "batch_map.tsv")   # produced by Rev_01_batch_map.sh

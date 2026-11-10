@@ -55,10 +55,10 @@ get_script_dir <- function() {
 setwd(get_script_dir())
 
 # Paths RELATIVE to this script's folder (figure + Table S4 are saved here)
-#   script : any sub-folder of Desktop (e.g. Desktop/Reviewers/Figure_7/Supp_Fig_S2/)
+#   script : any sub-folder of Desktop (e.g. 16S_liver_disease/Figure_7/Supp_Fig_S2/)
 #   data   : Desktop/16S_reprocess/qiime2_analysis_v2/
 # Find Desktop/16S_reprocess by walking up from this script's folder,
-# so the script works from any sub-folder of Desktop (e.g. Reviewers/Figure_7/Supp_Fig_S2/)
+# so the script works from any sub-folder of Desktop (e.g. 16S_liver_disease/Figure_7/Supp_Fig_S2/)
 find_proj_dir <- function(name = "16S_reprocess") {
   d <- normalizePath(getwd())
   repeat {

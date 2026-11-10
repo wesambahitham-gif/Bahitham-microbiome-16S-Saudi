@@ -122,4 +122,4 @@ qiime taxa collapse --i-table "$OUT/table-filt.qza" --i-taxonomy "$OUT/taxonomy.
 qiime taxa collapse --i-table "$OUT/table-filt.qza" --i-taxonomy "$OUT/taxonomy.qza" \
   --p-level 5 --o-collapsed-table "$OUT/table-l5.qza"
 
-# Downstream statistics (R) are in ../Reviewers/.
+# Downstream statistics (R) are in ../16S_liver_disease/.

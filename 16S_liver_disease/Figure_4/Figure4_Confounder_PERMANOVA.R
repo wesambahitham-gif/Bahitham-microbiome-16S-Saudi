@@ -29,7 +29,7 @@
 # ============================================================================
 
 # Paths are RELATIVE to this script's folder (outputs are saved here)
-#   script : Desktop/Reviewers/Figure_4/
+#   script : 16S_liver_disease/Figure_4/
 #   data   : Desktop/16S_reprocess/qiime2_analysis_v2/
 get_script_dir <- function() {
   args <- commandArgs(trailingOnly = FALSE)
@@ -73,7 +73,7 @@ if (length(missing) > 0) {
   stop("Missing input files:\n  ",
        paste(missing, collapse = "\n  "),
        "\n\nWorking directory: ", getwd(),
-       "\nSave this script in Desktop/Reviewers/Figure_4/ and click Source.")
+       "\nSave this script in 16S_liver_disease/Figure_4/ and click Source.")
 }
 cat("All input files located.\n\n")
 

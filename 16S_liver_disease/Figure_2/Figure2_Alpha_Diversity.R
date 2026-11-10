@@ -57,7 +57,7 @@ get_script_dir <- function() {
 setwd(get_script_dir())
 
 # Input data, RELATIVE to this script's folder
-#   script : Desktop/Reviewers/Figure_2/
+#   script : 16S_liver_disease/Figure_2/
 #   data   : Desktop/16S_reprocess/qiime2_analysis_v2/
 data_dir  <- file.path("..", "..", "16S_reprocess", "qiime2_analysis_v2")
 alpha_dir <- file.path(data_dir, "Alpha_diversity")

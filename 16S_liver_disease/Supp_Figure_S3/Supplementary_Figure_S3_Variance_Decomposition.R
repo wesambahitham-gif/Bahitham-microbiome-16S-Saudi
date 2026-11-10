@@ -61,15 +61,15 @@ find_proj_dir <- function(name = "16S_reprocess") {
 BASE_DIR   <- find_proj_dir()                                   # Desktop/16S_reprocess
 OUTPUT_DIR <- getwd()
 
-# RData written by Figure4_Confounder_PERMANOVA.R (searched for under Desktop/Reviewers)
-rdata_hits <- list.files(file.path(dirname(BASE_DIR), "Reviewers"),
+# RData written by Figure4_Confounder_PERMANOVA.R (searched for under 16S_liver_disease/)
+rdata_hits <- list.files(dirname(getwd()),
                          pattern = "^PERMANOVA_results_for_supplementary\\.RData$",
                          recursive = TRUE, full.names = TRUE)
 RDATA_FILE <- if (length(rdata_hits)) rdata_hits[which.max(file.mtime(rdata_hits))] else
-  file.path(dirname(BASE_DIR), "Reviewers", "Figure_4", "PERMANOVA_results_for_supplementary.RData")
+  file.path(dirname(getwd()), "Figure_4", "PERMANOVA_results_for_supplementary.RData")
 
 # omega^2 and R^2/df for every term of the adjusted marginal model (same 11 covariates)
-REV03_FILE <- file.path(dirname(BASE_DIR), "Reviewers", "Supp_Analyses", "Rev03_PERMANOVA_Robustness.xlsx")   # from Supplementary_Analyses_Revision.R
+REV03_FILE <- file.path(dirname(getwd()), "Supp_Analyses", "Rev03_PERMANOVA_Robustness.xlsx")   # from Supplementary_Analyses_Revision.R
 cat("RData :", RDATA_FILE, "\nRev03 :", REV03_FILE, "\n")
 
 # ============================================================================

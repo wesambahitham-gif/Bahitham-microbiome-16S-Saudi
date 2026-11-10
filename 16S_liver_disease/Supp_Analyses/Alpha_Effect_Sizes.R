@@ -2,7 +2,7 @@
 # Alpha diversity effect sizes vs healthy controls (Reviewer 2, comment 15)
 # % difference in medians (bootstrap 95% CI), Cliff's delta, KW + BH across 5 metrics,
 # and minimum detectable effect (80% power, two-sided alpha 0.05).
-# Run from Desktop/Reviewers/Figure_2 (finds Desktop/16S_reprocess automatically).
+# Run from 16S_liver_disease/Figure_2 (finds Desktop/16S_reprocess automatically).
 get_script_dir <- function() {
   args <- commandArgs(trailingOnly = FALSE)
   f <- sub("^--file=", "", args[grep("^--file=", args)])

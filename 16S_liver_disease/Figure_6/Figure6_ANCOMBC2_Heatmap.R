@@ -13,7 +13,7 @@
 #       Left  block = unadjusted (Status)
 #       Right block = adjusted for age, sex, BMI, PPI, metformin, statin
 #     Rows = genera significant (q < 0.05 AND passing the pseudo-count
-#     sensitivity analysis) in >= 1 unadjusted contrast.
+#     sensitivity 16S_liver_disease) in >= 1 unadjusted contrast.
 #
 # Generates:
 #   Figure6_ANCOMBC2_Heatmap.pdf/.png/.svg
@@ -62,7 +62,7 @@ get_script_dir <- function() {
 setwd(get_script_dir())
 
 # Paths RELATIVE to this script's folder (figure files are saved here)
-#   script : Desktop/Reviewers/Figure_6/
+#   script : 16S_liver_disease/Figure_6/
 #   data   : Desktop/16S_reprocess/qiime2_analysis_v2/
 proj_dir    <- file.path("..", "..", "16S_reprocess")
 data_dir    <- file.path(proj_dir, "qiime2_analysis_v2")
@@ -98,7 +98,7 @@ missing <- required_files[!file.exists(required_files)]
 if (length(missing) > 0) {
   stop("Missing input files:\n  ",
        paste(names(missing), missing, sep = ": ", collapse = "\n  "),
-       "\n\nWorking directory: ", getwd(), "\nSave this script in Desktop/Reviewers/Figure_6/ and click Source.")
+       "\n\nWorking directory: ", getwd(), "\nSave this script in 16S_liver_disease/Figure_6/ and click Source.")
 }
 cat("All input files located.\n\n")
 
@@ -252,7 +252,7 @@ if (is.null(row_taxa)) {
 # 6. PLOT DATA
 # ============================================================
 
-# * / ** / *** = q < 0.05 AND passed the pseudo-count sensitivity analysis
+# * / ** / *** = q < 0.05 AND passed the pseudo-count sensitivity 16S_liver_disease
 # \u2020 (dagger) = q < 0.05 but NOT robust to pseudo-count choice (failed passed_ss)
 stars <- function(q, sig) ifelse(is.na(q), "",
                           ifelse(sig, ifelse(q < 0.001, "***", ifelse(q < 0.01, "**", "*")),

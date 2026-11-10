@@ -78,14 +78,14 @@ find_proj_dir <- function(name = "16S_reprocess") {
 }
 PROJ_DIR      <- find_proj_dir()                                   # Desktop/16S_reprocess
 DATA_DIR      <- file.path(PROJ_DIR, "qiime2_analysis_v2")         # reprocessed data
-REVIEWERS_DIR <- file.path(dirname(PROJ_DIR), "Reviewers")         # Desktop/Reviewers
+ANALYSIS_DIR <- dirname(getwd())         # 16S_liver_disease
 ALPHA_DIR     <- file.path(DATA_DIR, "Alpha_diversity")
 
 # Input files
 METADATA_FILE  <- file.path(PROJ_DIR, "sample_metadata.tsv")
 EXCL_FILE      <- file.path(PROJ_DIR, "sample_exclusions.txt")     # optional; shared with all scripts
 ANCOMBC2_DIR   <- file.path(DATA_DIR, "ANCOMBC2_R")                # Figure 6 / 7 outputs
-REV_DIR        <- file.path(REVIEWERS_DIR, "Supp_Analyses")        # Supplementary_Analyses_Revision.R outputs
+REV_DIR        <- file.path(ANALYSIS_DIR, "Supp_Analyses")        # Supplementary_Analyses_Revision.R outputs
 
 # Alpha diversity: QIIME 2 exports (rarefied at 13,000), read directly
 SHANNON_FILE   <- file.path(ALPHA_DIR, "Shannon", "Shannon_Liver.tsv")
@@ -96,10 +96,10 @@ FAITHPD_FILE   <- file.path(ALPHA_DIR, "Faith-pd", "faith-pd.tsv")
 
 # Differential abundance
 ANCOMBC_FILE   <- file.path(ANCOMBC2_DIR, "ANCOMBC2_all_results.csv")            # Figure6_ANCOMBC2_Heatmap.R
-s4_hits <- list.files(REVIEWERS_DIR, pattern = "^Table_S4_Concordance_Details\\.xlsx$",
+s4_hits <- list.files(ANALYSIS_DIR, pattern = "^Table_S4_Concordance_Details\\.xlsx$",
                       recursive = TRUE, full.names = TRUE)                       # Supp Fig S2 script output
 DESEQ2_FILE    <- if (length(s4_hits)) s4_hits[which.max(file.mtime(s4_hits))] else
-                  file.path(REVIEWERS_DIR, "Table_S4_Concordance_Details.xlsx")
+                  file.path(ANALYSIS_DIR, "Table_S4_Concordance_Details.xlsx")
 
 # Correlations & PERMANOVA
 SPEARMAN_FILE  <- file.path(ANCOMBC2_DIR, "Spearman_pooled_and_partial.csv")     # Figure7_Spearman_Heatmap.R
@@ -598,12 +598,12 @@ for (i in seq_len(nrow(st2b_wide))) {
 
 # ── ST2 Panel C: effect sizes vs Healthy + minimum detectable effect (Alpha_Effect_Sizes.R) ──
 find_rev <- function(fn) {
-  # search this script's folder, Desktop/Reviewers, then the whole Desktop (newest copy wins)
-  for (root in unique(c(getwd(), REVIEWERS_DIR, dirname(PROJ_DIR)))) {
+  # search this script's folder, analysis, then the whole Desktop (newest copy wins)
+  for (root in unique(c(getwd(), ANALYSIS_DIR, dirname(PROJ_DIR)))) {
     h <- list.files(root, pattern = paste0("^", fn, "$"), recursive = TRUE, full.names = TRUE)
     if (length(h)) { f <- h[which.max(file.mtime(h))]; cat("  Using", f, "\n"); return(f) }
   }
-  stop("Not found: ", gsub("\\\\", "", fn), "\nSearched: ", getwd(), ", ", REVIEWERS_DIR, ", ", dirname(PROJ_DIR),
+  stop("Not found: ", gsub("\\\\", "", fn), "\nSearched: ", getwd(), ", ", ANALYSIS_DIR, ", ", dirname(PROJ_DIR),
        "\nRun Alpha_Effect_Sizes.R first, or copy its CSV files into this script's folder.")
 }
 es  <- read.csv(find_rev("Alpha_effect_sizes_vs_Healthy\\.csv"), check.names = FALSE)
@@ -1102,7 +1102,7 @@ doc <- doc %>%
   officer::body_add_par(sprintf("Panel A: ANCOM-BC2 (%d genera tested; q < 0.05 shown)", n_genera_tested), style = "heading 3") %>%
   officer::body_add_par(paste0(
     "ANCOM-BC2 (ANCOMBC R package; Status ~ Healthy reference; prevalence filter 10%; ",
-    "structural-zero detection; pseudo-count sensitivity analysis). LFC = natural-log fold change relative to Healthy; ",
+    "structural-zero detection; pseudo-count sensitivity 16S_liver_disease). LFC = natural-log fold change relative to Healthy; ",
     "positive = enriched in disease. FDR = Benjamini-Hochberg across genera within each contrast. ",
     "Genera with q < 0.05 are shown; Direction is given only when the genus also passed the pseudo-count sensitivity ",
     "analysis (q < 0.05 with Direction = ns indicates a non-robust result). All genera are listed in sheet S4A of the Excel workbook. ",

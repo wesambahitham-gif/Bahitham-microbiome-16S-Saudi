@@ -18,7 +18,7 @@ Because the clinical metadata cannot be shared, scripts that use clinical covari
 
 ## Repository layout
 
-The scripts use relative paths and expect two sibling folders, `16S_reprocess/` (data; not included) and `Reviewers/` (code):
+The scripts use relative paths and expect two sibling folders, `16S_reprocess/` (data; not included) and `16S_liver_disease/` (code):
 
 ```
 .
@@ -26,7 +26,7 @@ The scripts use relative paths and expect two sibling folders, `16S_reprocess/` 
 │   ├── qiime2_analysis_v2/        #   exported tables (alpha, beta, taxonomy, feature tables)
 │   └── sample_metadata.tsv        #   clinical metadata (restricted)
 ├── qiime2/                        # QIIME 2 commands (primer removal → taxonomy → diversity)
-└── Reviewers/
+└── 16S_liver_disease/
     ├── Figure_1/  … Figure_8/     # one folder per main figure
     ├── Supp_Figure_S1/ … S3/      # supplementary figures
     ├── Supp_Analyses/             # sensitivity analyses + alpha effect sizes

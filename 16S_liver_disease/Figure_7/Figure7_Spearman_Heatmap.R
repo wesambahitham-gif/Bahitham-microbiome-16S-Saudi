@@ -57,7 +57,7 @@ get_script_dir <- function() {
 setwd(get_script_dir())
 
 # Paths RELATIVE to this script's folder (figure files and tables are saved here)
-#   script : Desktop/Reviewers/Figure_7/
+#   script : 16S_liver_disease/Figure_7/
 #   data   : Desktop/16S_reprocess/qiime2_analysis_v2/
 proj_dir    <- file.path("..", "..", "16S_reprocess")
 data_dir    <- file.path(proj_dir, "qiime2_analysis_v2")
@@ -78,7 +78,7 @@ if (length(missing) > 0) {
   stop("Missing input files:\n  ",
        paste(names(missing), missing, sep = ": ", collapse = "\n  "),
        "\n\nWorking directory: ", getwd(),
-       "\nSave this script in Desktop/Reviewers/Figure_7/ and click Source.",
+       "\nSave this script in 16S_liver_disease/Figure_7/ and click Source.",
        "\nRun Figure6_ANCOMBC2_Heatmap.R first (it writes ANCOMBC2_DA_taxa.csv).")
 }
 cat("All input files located.\n\n")
