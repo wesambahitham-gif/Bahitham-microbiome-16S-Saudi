@@ -47,6 +47,8 @@ Each script sets its working directory to its own folder and writes outputs ther
 | Phylogeny | MAFFT + FastTree |
 | Rarefaction | 13,000 reads/sample (all 205 retained); sensitivity at 5,000–20,000 reads |
 
+**Run controls.** Four no-template PCR controls and four positive controls (ZymoBIOMICS D6300) on the same MiSeq run were processed with identical settings (`qiime2/run_controls.sh`). All positive-control reads were assigned to the eight expected bacterial taxa; no-template controls yielded 1,337–2,135 reads with a fecal-like profile (low-level well-to-well carry-over) and no reagent contaminants (Supplementary Methods).
+
 ## Scripts → manuscript items
 
 | Script | Folder | Produces |
@@ -74,7 +76,9 @@ Each script sets its working directory to its own folder and writes outputs ther
 2. `Figure_2` … `Figure_8`, `Supp_Figure_S1`, `Supp_Figure_S2`
 3. `Supp_Analyses/Supplementary_Analyses_Revision.R` and `Supp_Analyses/Alpha_Effect_Sizes.R`
 4. `Supp_Figure_S3`
-5. `Main_Tables`, then `Supp_Tables`
+5. `Main_Tables`, then `Supp_Tables` (`Generate_Main_Tables.R` writes `Table2_PERMANOVA_values.csv`; the adjusted disease-status values in Supplementary Tables S3C and S3D are taken from it, so Table 2 and Table S3 report the same permutation run)
+
+**Saved results.** `Figure6_ANCOMBC2_Heatmap.R` and `Supplementary_Figure_S2_DESeq2_Concordance.R` have a `REFIT` switch. With `REFIT <- FALSE` (default) they redraw the figures from the saved ANCOM-BC2 / DESeq2 result tables; set `REFIT <- TRUE` to refit (ANCOMBC 2.12.0 and DESeq2 1.50.2 reproduce the published results). Features not classified to genus are labelled at their lowest assigned rank, e.g. "Rhodospirillales (unclassified)".
 
 ## Software
 
