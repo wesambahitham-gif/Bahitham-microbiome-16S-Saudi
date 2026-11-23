@@ -78,7 +78,7 @@ find_proj_dir <- function(name = "16S_reprocess") {
 }
 PROJ_DIR      <- find_proj_dir()                                   # Desktop/16S_reprocess
 DATA_DIR      <- file.path(PROJ_DIR, "qiime2_analysis_v2")         # reprocessed data
-ANALYSIS_DIR <- dirname(getwd())         # 16S_liver_disease
+ANALYSIS_DIR <- dirname(getwd())   # 16S_liver_disease (parent of this script's folder)
 ALPHA_DIR     <- file.path(DATA_DIR, "Alpha_diversity")
 
 # Input files
@@ -598,7 +598,7 @@ for (i in seq_len(nrow(st2b_wide))) {
 
 # ── ST2 Panel C: effect sizes vs Healthy + minimum detectable effect (Alpha_Effect_Sizes.R) ──
 find_rev <- function(fn) {
-  # search this script's folder, analysis, then the whole Desktop (newest copy wins)
+  # search this script's folder, 16S_liver_disease, then the whole Desktop (newest copy wins)
   for (root in unique(c(getwd(), ANALYSIS_DIR, dirname(PROJ_DIR)))) {
     h <- list.files(root, pattern = paste0("^", fn, "$"), recursive = TRUE, full.names = TRUE)
     if (length(h)) { f <- h[which.max(file.mtime(h))]; cat("  Using", f, "\n"); return(f) }
@@ -644,7 +644,9 @@ ft_st2c <- std_ft(st2c, widths = c(2.4, 2.3, 2.3, 2.3)) %>%
   flextable::italic(i = nrow(st2c), part = "body") %>%
   flextable::bg(i = nrow(st2c), bg = "#F2F2F2", part = "body")
 fmt_e <- function(x) ifelse(is.na(x), "--", formatC(x, format = "e", digits = 2))
-clean_display <- function(x) gsub("_", " ", gsub("\\[|\\]", "", x))
+clean_display <- function(x) ifelse(grepl("^\\[[^]]*\\]$", x),          # whole name in [ ] = genus not assigned,
+  paste0(gsub("_", " ", gsub("^\\[|\\]$", "", x)), " (unclassified)"),   #   lowest assigned rank shown, e.g. Rhodospirillales (order)
+  gsub("_", " ", gsub("\\[|\\]", "", x)))
 
 anc_all <- read.csv(ANCOMBC_FILE, stringsAsFactors = FALSE)
 anc_un  <- anc_all %>% dplyr::filter(Model == "Unadjusted")
@@ -886,7 +888,25 @@ eff <- read_excel(REV03_FILE, sheet = "A_Effect_sizes_all_terms") %>% dplyr::fil
 sens <- read_excel(REV03_FILE, sheet = "D_Sensitivity_subsets")
 st8a <- eff %>% dplyr::select(Metric, Model, R2, P) %>%
   dplyr::mutate(Model = ifelse(Model == "Unadjusted", "Full_unadj", "Full_adj")) %>%
-  pivot_wider(names_from = Model, values_from = c(R2, P)) %>%
+  pivot_wider(names_from = Model, values_from = c(R2, P))
+# Full-cohort values come from the Table 2 run (Generate_Main_Tables.R), so Table 2 and S3D agree exactly;
+# Aitchison (not in Table 2) keeps the value from Supplementary_Analyses_Revision.R.
+t2v <- read.csv(find_rev("Table2_PERMANOVA_values\\.csv"))
+mkey <- function(x) gsub("[^A-Za-z]", "", x)   # "Bray-Curtis" == "Bray\u2013Curtis" regardless of dash/encoding
+for (k in seq_len(nrow(t2v))) {
+  i <- which(mkey(st8a$Metric) == mkey(t2v$Metric[k]))
+  if (length(i) == 1) st8a[i, c("R2_Full_unadj", "P_Full_unadj", "R2_Full_adj", "P_Full_adj")] <-
+      as.list(unlist(t2v[k, c("R2_u", "P_u", "R2_a", "P_a")]))
+  else message("  S3D: no row for ", t2v$Metric[k], " -- check metric names")
+}
+# Aitchison (not in Table 2): use the same run as S3C, so S3C and S3D agree
+s9_ait <- read_excel(S9_FILE, sheet = "S9_Age_BMI_Sex") %>%
+  dplyr::filter(grepl("^Aitchison", Metric), Variable == "Disease status")
+i_ait <- grep("^Aitchison", st8a$Metric)
+if (length(i_ait) == 1 && nrow(s9_ait) == 1) {
+  st8a$R2_Full_adj[i_ait] <- s9_ait$Adjusted_R2; st8a$P_Full_adj[i_ait] <- s9_ait$Adjusted_P
+}
+st8a <- st8a %>%
   left_join(sens %>% dplyr::filter(grepl("Non-viral", Subset)) %>%
               dplyr::select(Metric, NV_R2_unadj = R2_unadj, NV_P_unadj = P_unadj, NV_R2_adj = R2_adj,
                      NV_P_adj = P_adj, NV_Welch = Welch_Wd_P), by = "Metric") %>%
@@ -929,6 +949,12 @@ cat(sprintf("  %d metrics; %d genus contrasts\n", nrow(st8a), nrow(st8b)))
 cat("\n-- ST9: Age, BMI, sex --\n")
 
 s9 <- read_excel(S9_FILE, sheet = "S9_Age_BMI_Sex")
+# Disease-status adjusted R2/p taken from the Table 2 run, so S3C, S3D and Table 2 agree
+for (k in seq_len(nrow(t2v))) {
+  i <- which(mkey(s9$Metric) == mkey(t2v$Metric[k]) & s9$Variable == "Disease status")
+  if (length(i) == 1) { s9$Adjusted_R2[i] <- t2v$R2_a[k]; s9$Adjusted_P[i] <- t2v$P_a[k] }
+  else message("  S3C: no disease-status row for ", t2v$Metric[k])
+}
 st9 <- s9 %>% transmute(Metric, Variable,
   `Univariate R2 (p)`    = ifelse(is.na(Univariate_R2), "--", sprintf("%.3f (%s)", Univariate_R2, sapply(Univariate_P, fmt_p))),
   `Adjusted R2 (p)`      = sprintf("%.3f (%s)", Adjusted_R2, sapply(Adjusted_P, fmt_p)),
@@ -1102,7 +1128,7 @@ doc <- doc %>%
   officer::body_add_par(sprintf("Panel A: ANCOM-BC2 (%d genera tested; q < 0.05 shown)", n_genera_tested), style = "heading 3") %>%
   officer::body_add_par(paste0(
     "ANCOM-BC2 (ANCOMBC R package; Status ~ Healthy reference; prevalence filter 10%; ",
-    "structural-zero detection; pseudo-count sensitivity 16S_liver_disease). LFC = natural-log fold change relative to Healthy; ",
+    "structural-zero detection; pseudo-count sensitivity analysis). LFC = natural-log fold change relative to Healthy; ",
     "positive = enriched in disease. FDR = Benjamini-Hochberg across genera within each contrast. ",
     "Genera with q < 0.05 are shown; Direction is given only when the genus also passed the pseudo-count sensitivity ",
     "analysis (q < 0.05 with Direction = ns indicates a non-robust result). All genera are listed in sheet S4A of the Excel workbook. ",
@@ -1232,21 +1258,14 @@ doc_xml <- gsub(
 )
 writeChar(doc_xml, doc_path, eos = NULL, useBytes = TRUE)
 
-# Repack the DOCX using system zip for Word compatibility
-# (utils::zip can produce archives Word rejects)
+# Repack the DOCX
 old_wd <- setwd(tmp_dir)
 all_files <- list.files(".", recursive = TRUE, all.files = FALSE)
 out_path <- normalizePath(OUTPUT_FILE, mustWork = FALSE)
 if (file.exists(out_path)) file.remove(out_path)
 
-# DOCX requires [Content_Types].xml at root with no path prefix
-# Use system zip with -X (no extra attributes) for maximum compatibility
-zip_result <- system2("zip", args = c("-r", "-X", "-q", shQuote(out_path), "."),
-                      stdout = TRUE, stderr = TRUE)
-if (!file.exists(out_path)) {
-  # Fallback: try utils::zip if system zip unavailable
-  utils::zip(out_path, files = all_files, flags = "-r9Xq")
-}
+# zip package (installed with officer): works on macOS and Windows without a system zip program
+zip::zip(out_path, files = list.files(".", recursive = TRUE, all.files = TRUE), mode = "mirror")
 setwd(old_wd)
 unlink(tmp_dir, recursive = TRUE)
 
