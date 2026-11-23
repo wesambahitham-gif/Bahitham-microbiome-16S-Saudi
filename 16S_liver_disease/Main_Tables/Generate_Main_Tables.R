@@ -44,7 +44,7 @@ find_proj_dir <- function(name = "16S_reprocess") {
   stop("Could not find a '", name, "' folder above ", getwd())
 }
 PROJ_DIR      <- find_proj_dir()                                   # Desktop/16S_reprocess
-ANALYSIS_DIR <- dirname(getwd())         # 16S_liver_disease
+ANALYSIS_DIR <- dirname(getwd())   # 16S_liver_disease (parent of this script's folder)
 METADATA_FILE <- file.path(PROJ_DIR, "sample_metadata.tsv")
 JACCARD_FILE  <- file.path(PROJ_DIR, "qiime2_analysis_v2", "Beta_diversity", "Jaccard", "Jaccardraw_data.tsv")
 rd <- list.files(ANALYSIS_DIR, pattern = "^PERMANOVA_results_for_supplementary\\.RData$", recursive = TRUE, full.names = TRUE)
@@ -75,8 +75,8 @@ compact_docx <- function(path) {
              '<w:pgMar w:header="360" w:bottom="720" w:top="720" w:right="1000" w:left="1000" w:footer="360" w:gutter="0"/>', dx, fixed = TRUE)
   writeChar(dx, dp, eos = NULL, useBytes = TRUE)
   old <- setwd(tmp); out <- normalizePath(path, mustWork = FALSE); if (file.exists(out)) file.remove(out)
-  system2("zip", args = c("-r", "-X", "-q", shQuote(out), "."), stdout = TRUE, stderr = TRUE)
-  if (!file.exists(out)) utils::zip(out, files = list.files(".", recursive = TRUE), flags = "-r9Xq")
+  # zip package (installed with officer): works on macOS and Windows without a system zip program
+  zip::zip(out, files = list.files(".", recursive = TRUE, all.files = TRUE), mode = "mirror")
   setwd(old); unlink(tmp, recursive = TRUE)
 }
 new_doc <- function() read_docx() %>% body_set_default_section(prop_section(
@@ -378,6 +378,8 @@ t2_rows <- lapply(c("Weighted UniFrac", "Unweighted UniFrac", "Bray-Curtis", "Ja
 t2 <- bind_rows(t2_rows) %>% mutate(Reduction = 100 * (R2_u - R2_a) / R2_u)
 if (anyNA(t2[, c("F_u", "R2_u", "P_u", "F_a", "R2_a", "P_a")])) stop("Table 2 has missing values -- check the adonis2 output above")
 print(t2, digits = 3)
+# Single source of truth: Supplementary Table S3D reads these full-cohort values
+write.csv(t2, file.path(OUTPUT_DIR, "Table2_PERMANOVA_values.csv"), row.names = FALSE)
 
 fmt_pp <- function(p) if (is.na(p)) "NA" else if (p < 0.001) "<0.001" else sprintf("%.3f", p)
 st2 <- t2 %>% transmute(
