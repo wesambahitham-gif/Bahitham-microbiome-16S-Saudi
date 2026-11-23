@@ -27,8 +27,12 @@
 rm(list = ls())
 cat("\014")
 
+# REFIT = FALSE: reuse the saved DESeq2 results (DESeq2_vs_ANCOMBC2_unadjusted.csv) and only redraw.
+# REFIT = TRUE : refit DESeq2 (requires DESeq2 1.50.2 for identical results).
+REFIT <- FALSE
+
 suppressPackageStartupMessages({
-  library(DESeq2); library(openxlsx); library(ggplot2); library(dplyr); library(tidyr)
+  if (REFIT) library(DESeq2); library(openxlsx); library(ggplot2); library(dplyr); library(tidyr)
   library(ggVennDiagram); library(gridExtra); library(cowplot); library(scales); library(svglite)
 })
 # Guard against masking (MASS, ANCOMBC deps, plyr, AnnotationDbi also export select/filter)
@@ -58,7 +62,7 @@ setwd(get_script_dir())
 #   script : any sub-folder of Desktop (e.g. 16S_liver_disease/Figure_7/Supp_Fig_S2/)
 #   data   : Desktop/16S_reprocess/qiime2_analysis_v2/
 # Find Desktop/16S_reprocess by walking up from this script's folder,
-# so the script works from any sub-folder of Desktop (e.g. 16S_liver_disease/Figure_7/Supp_Fig_S2/)
+# so the script works from any sub-folder of Desktop (e.g. 16S_liver_disease/Supp_Figure_S2/)
 find_proj_dir <- function(name = "16S_reprocess") {
   d <- normalizePath(getwd())
   repeat {
@@ -109,7 +113,9 @@ clean_genus <- function(taxon) {
   }
   paste0("Taxon_", substr(gsub("[^a-zA-Z0-9]", "", taxon), 1, 8))
 }
-clean_display <- function(x) gsub("_", " ", gsub("\\[|\\]", "", x))
+clean_display <- function(x) ifelse(grepl("^\\[[^]]*\\]$", x),          # whole name in [ ] = genus not assigned,
+  paste0(gsub("_", " ", gsub("^\\[|\\]$", "", x)), " (unclassified)"),   #   lowest assigned rank shown, e.g. Rhodospirillales (order)
+  gsub("_", " ", gsub("\\[|\\]", "", x)))
 
 # =============================================================================
 # 1. LOAD DATA
@@ -125,7 +131,8 @@ rownames(meta) <- meta$SampleID
 if (file.exists(excl_file)) { excl <- trimws(readLines(excl_file)); meta <- meta[!meta$SampleID %in% excl[nzchar(excl)], ] }
 common <- intersect(colnames(counts), meta$SampleID)
 counts <- counts[, common]; meta <- meta[common, ]
-n_text <- paste(sprintf("n=%d %s", as.integer(table(meta$Status)), GROUPS), collapse = ", ")
+n_text <- paste0("Unadjusted models; n = ", paste(as.integer(table(meta$Status)), collapse = "/"),
+                 "\n(", paste(GROUPS, collapse = "/"), ")")
 
 anc <- read.csv(anc_file, stringsAsFactors = FALSE) %>% dplyr::filter(Model == "Unadjusted")
 
@@ -133,30 +140,39 @@ anc <- read.csv(anc_file, stringsAsFactors = FALSE) %>% dplyr::filter(Model == "
 # 2. DESeq2 — one model, all groups, Healthy reference
 # =============================================================================
 
-cat("Running DESeq2 (single model, ~ Status)...\n")
-keep <- rowSums(counts >= MIN_COUNT) >= ceiling(MIN_SAMPLE_PCT * ncol(counts))
-dds <- DESeqDataSetFromMatrix(round(counts[keep, ]), meta, ~ Status)
-dds$Status <- relevel(dds$Status, ref = "Healthy")
-dds <- estimateSizeFactors(dds, type = "poscounts")    # geometric mean of positive counts (as before)
-dds <- DESeq(dds, fitType = "local", quiet = TRUE)
-des <- bind_rows(lapply(DISEASE, function(g) {
-  r <- results(dds, contrast = c("Status", g, "Healthy"), cooksCutoff = FALSE, independentFiltering = FALSE)
-  data.frame(Contrast = paste(g, "vs Healthy"), Taxon = rownames(r), DES_LFC = r$log2FoldChange,
-             DES_SE = r$lfcSE, DES_P = r$pvalue, DES_Q = r$padj, stringsAsFactors = FALSE)
-}))
-cat(sprintf("  %d genera tested after filter\n", sum(keep)))
+comb_file <- file.path(results_dir, "DESeq2_vs_ANCOMBC2_unadjusted.csv")
+if (!REFIT && !file.exists(comb_file)) stop("REFIT = FALSE but no saved results found:\n  ", comb_file)
+if (REFIT) {
+  cat("Running DESeq2 (single model, ~ Status)...\n")
+  keep <- rowSums(counts >= MIN_COUNT) >= ceiling(MIN_SAMPLE_PCT * ncol(counts))
+  dds <- DESeqDataSetFromMatrix(round(counts[keep, ]), meta, ~ Status)
+  dds$Status <- relevel(dds$Status, ref = "Healthy")
+  dds <- estimateSizeFactors(dds, type = "poscounts")    # geometric mean of positive counts (as before)
+  dds <- DESeq(dds, fitType = "local", quiet = TRUE)
+  des <- bind_rows(lapply(DISEASE, function(g) {
+    r <- results(dds, contrast = c("Status", g, "Healthy"), cooksCutoff = FALSE, independentFiltering = FALSE)
+    data.frame(Contrast = paste(g, "vs Healthy"), Taxon = rownames(r), DES_LFC = r$log2FoldChange,
+               DES_SE = r$lfcSE, DES_P = r$pvalue, DES_Q = r$padj, stringsAsFactors = FALSE)
+  }))
+  cat(sprintf("  %d genera tested after filter\n", sum(keep)))
 
-# =============================================================================
-# 3. CONCORDANCE
-# =============================================================================
+  # =============================================================================
+  # 3. CONCORDANCE
+  # =============================================================================
 
-comb <- anc %>% dplyr::select(Contrast, Taxon, ANC_LFC = LFC, ANC_Q = Q, ANC_Sig = Significant) %>%
-  full_join(des, by = c("Contrast", "Taxon")) %>%
-  dplyr::mutate(Genus = vapply(Taxon, clean_genus, ""),
-         ANC_Sig = ANC_Sig %in% TRUE,
-         DES_Sig = !is.na(DES_Q) & DES_Q < FDR_CUTOFF,
-         Concordant = ANC_Sig & DES_Sig & sign(ANC_LFC) == sign(DES_LFC),
-         Discordant_direction = ANC_Sig & DES_Sig & sign(ANC_LFC) != sign(DES_LFC))
+  comb <- anc %>% dplyr::select(Contrast, Taxon, ANC_LFC = LFC, ANC_Q = Q, ANC_Sig = Significant) %>%
+    full_join(des, by = c("Contrast", "Taxon")) %>%
+    dplyr::mutate(Genus = vapply(Taxon, clean_genus, ""),
+           ANC_Sig = ANC_Sig %in% TRUE,
+           DES_Sig = !is.na(DES_Q) & DES_Q < FDR_CUTOFF,
+           Concordant = ANC_Sig & DES_Sig & sign(ANC_LFC) == sign(DES_LFC),
+           Discordant_direction = ANC_Sig & DES_Sig & sign(ANC_LFC) != sign(DES_LFC))
+} else {
+  cat("Using saved DESeq2 results (no refit):\n  ", comb_file, "\n")
+  comb <- read.csv(comb_file, stringsAsFactors = FALSE)
+  for (v in c("ANC_Sig", "DES_Sig", "Concordant", "Discordant_direction")) comb[[v]] <- as.logical(comb[[v]])
+  comb$Genus <- vapply(comb$Taxon, clean_genus, "")
+}
 
 summary_df <- comb %>% dplyr::mutate(Comparison = sub(" vs Healthy", "", Contrast)) %>%
   group_by(Comparison) %>%
@@ -195,7 +211,7 @@ for (sh in list(list("Summary", summary_df), list("Concordance_Details", tab_s4)
   setColWidths(wb, sh[[1]], cols = seq_len(ncol(sh[[2]])), widths = "auto")
 }
 saveWorkbook(wb, file.path(output_dir, "Supplementary_Tables", "Table_S4_Concordance_Details.xlsx"), overwrite = TRUE)
-write.csv(comb, file.path(results_dir, "DESeq2_vs_ANCOMBC2_unadjusted.csv"), row.names = FALSE)
+if (REFIT) write.csv(comb, comb_file, row.names = FALSE)
 
 # Agreement beyond the q < 0.05 overlap (Reviewer 2, point 8):
 #   (a) Spearman correlation of effect sizes across all genera tested by both methods
@@ -234,7 +250,7 @@ venn_plots <- lapply(DISEASE, function(g) {
     annotate("text", x = 0.5, y = -1.5, label = length(a),   size = 3) +
     annotate("text", x = 0.5, y = 2.5,  label = n_c,         size = 3.6, fontface = "bold") +
     labs(title = sprintf("%s vs Healthy", g),
-         subtitle = sprintf("Concordant: %d/%d (%.0f%%)", n_c, length(a), 100 * n_c / max(1, length(a)))) +
+         subtitle = sprintf("Unadjusted; concordant: %d/%d (%.0f%%)", n_c, length(a), 100 * n_c / max(1, length(a)))) +
     venn_theme
 })
 
@@ -259,8 +275,8 @@ table_plot <- ggdraw() + draw_grob(tableGrob(tab_show, rows = NULL,
 hm <- comb %>% dplyr::filter(Taxon %in% conc_taxa) %>%
   dplyr::select(Taxon, Genus, Contrast, ANC_LFC, ANC_Q, ANC_Sig, DES_LFC, DES_Q) %>%
   pivot_longer(c(ANC_LFC, DES_LFC), names_to = "Method", values_to = "LFC") %>%
-  dplyr::mutate(Method = ifelse(Method == "ANC_LFC", "ANCOM-BC2", "DESeq2"),
-         Sig = ifelse(Method == "ANCOM-BC2", ifelse(ANC_Sig, stars(ANC_Q), ""), stars(DES_Q)),
+  dplyr::mutate(Method = ifelse(Method == "ANC_LFC", "ANCOM-BC2 (unadjusted)", "DESeq2 (unadjusted)"),
+         Sig = ifelse(Method == "ANCOM-BC2 (unadjusted)", ifelse(ANC_Sig, stars(ANC_Q), ""), stars(DES_Q)),
          Column = factor(sub(" vs Healthy", "", Contrast), levels = DISEASE),
          Genus_lab = clean_display(Genus))
 p_heat <- ggplot(hm, aes(x = Column, y = Genus_lab, fill = LFC)) +
