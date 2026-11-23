@@ -13,7 +13,7 @@
 #       Left  block = unadjusted (Status)
 #       Right block = adjusted for age, sex, BMI, PPI, metformin, statin
 #     Rows = genera significant (q < 0.05 AND passing the pseudo-count
-#     sensitivity 16S_liver_disease) in >= 1 unadjusted contrast.
+#     sensitivity analysis) in >= 1 unadjusted contrast.
 #
 # Generates:
 #   Figure6_ANCOMBC2_Heatmap.pdf/.png/.svg
@@ -31,8 +31,12 @@
 rm(list = ls())
 cat("\014")
 
+# REFIT = FALSE: reuse the saved ANCOM-BC2 results (ANCOMBC2_all_results.csv) and only redraw.
+#   Use this on a computer without ANCOMBC 2.12.0, so the published results are not changed.
+# REFIT = TRUE : refit ANCOM-BC2 (requires ANCOMBC 2.12.0 / Bioconductor 3.22 for identical results).
+REFIT <- FALSE
+
 suppressMessages({
-  library(ANCOMBC)      # >= 2.8
   library(ggplot2)
   library(dplyr)
   library(tidyr)
@@ -64,7 +68,16 @@ setwd(get_script_dir())
 # Paths RELATIVE to this script's folder (figure files are saved here)
 #   script : 16S_liver_disease/Figure_6/
 #   data   : Desktop/16S_reprocess/qiime2_analysis_v2/
-proj_dir    <- file.path("..", "..", "16S_reprocess")
+find_proj_dir <- function(name = "16S_reprocess") {   # walks up: works whether 16S_reprocess sits
+  d <- normalizePath(getwd())                          #   beside the code folder or inside it
+  repeat {
+    cand <- file.path(d, name)
+    if (dir.exists(cand)) return(cand)
+    up <- dirname(d); if (up == d) break; d <- up
+  }
+  stop("Could not find a '", name, "' folder above ", getwd())
+}
+proj_dir    <- find_proj_dir()
 data_dir    <- file.path(proj_dir, "qiime2_analysis_v2")
 counts_file <- file.path(data_dir, "Desq", "DeSeq_l6", "feature-table_L6.tsv")   # unrarefied genus counts
 meta_file   <- file.path(proj_dir, "sample_metadata.tsv")
@@ -170,7 +183,9 @@ clean_genus <- function(taxon) {
   }
   paste0("Taxon_", substr(gsub("[^a-zA-Z0-9]", "", taxon), 1, 8))
 }
-clean_display <- function(name) gsub("_", " ", gsub("\\[|\\]", "", name))
+clean_display <- function(x) ifelse(grepl("^\\[[^]]*\\]$", x),          # whole name in [ ] = genus not assigned,
+  paste0(gsub("_", " ", gsub("^\\[|\\]$", "", x)), " (unclassified)"),   #   lowest assigned rank shown, e.g. Rhodospirillales (order)
+  gsub("_", " ", gsub("\\[|\\]", "", x)))
 
 # ============================================================
 # 3. RUN ANCOM-BC2 (unadjusted and adjusted)
@@ -199,10 +214,22 @@ run_ancombc2 <- function(formula_rhs, label) {
 }
 
 meta$Status <- relevel(meta$Status, ref = "Healthy")
-fit_un  <- run_ancombc2("Status", "Unadjusted")
-fit_adj <- run_ancombc2(paste(c("Status", ADJ_COVARS), collapse = " + "), "Adjusted")
-
-all_res <- bind_rows(fit_un$long, fit_adj$long)
+saved_res <- file.path(results_dir, "ANCOMBC2_all_results.csv")
+if (!REFIT && !file.exists(saved_res)) stop("REFIT = FALSE but no saved results found:\n  ", saved_res)
+if (REFIT) {
+  library(ANCOMBC)
+  ANC_VER <- as.character(packageVersion("ANCOMBC"))
+  fit_un  <- run_ancombc2("Status", "Unadjusted")
+  fit_adj <- run_ancombc2(paste(c("Status", ADJ_COVARS), collapse = " + "), "Adjusted")
+  all_res <- bind_rows(fit_un$long, fit_adj$long)
+} else {
+  cat("Using saved ANCOM-BC2 results (no refit):\n  ", saved_res, "\n")
+  ANC_VER <- "2.12.0"                                   # version that produced the saved results
+  all_res <- read.csv(saved_res, stringsAsFactors = FALSE)
+  all_res$Significant <- as.logical(all_res$Significant)
+  all_res$Passed_SS   <- as.logical(all_res$Passed_SS)
+  fit_un  <- list(n_tested = length(unique(all_res$Taxon[all_res$Model == "Unadjusted"])), zero_ind = NULL)
+}
 all_res$Genus <- vapply(all_res$Taxon, clean_genus, "")
 all_res$Contrast <- factor(all_res$Contrast, levels = paste(GROUPS[-1], "vs Healthy"))
 
@@ -215,7 +242,7 @@ cat(sprintf("\n  Genera significant in >= 1 unadjusted contrast: %d\n", length(s
 
 # Diagnostic: version + counts with / without the pseudo-count sensitivity filter
 cat(sprintf("  ANCOMBC %s | R %s | samples %d | taxa tested %d\n",
-            as.character(packageVersion("ANCOMBC")), getRversion(), ncol(counts), fit_un$n_tested))
+            ANC_VER, getRversion(), ncol(counts), fit_un$n_tested))
 print(all_res %>% group_by(Model, Contrast) %>%
         dplyr::summarise(q_lt_0.05 = sum(Q < ANC$alpha, na.rm = TRUE),
                   q_and_passed_ss = sum(Significant), .groups = "drop") %>% as.data.frame())
@@ -252,7 +279,7 @@ if (is.null(row_taxa)) {
 # 6. PLOT DATA
 # ============================================================
 
-# * / ** / *** = q < 0.05 AND passed the pseudo-count sensitivity 16S_liver_disease
+# * / ** / *** = q < 0.05 AND passed the pseudo-count sensitivity analysis
 # \u2020 (dagger) = q < 0.05 but NOT robust to pseudo-count choice (failed passed_ss)
 stars <- function(q, sig) ifelse(is.na(q), "",
                           ifelse(sig, ifelse(q < 0.001, "***", ifelse(q < 0.01, "**", "*")),
@@ -290,8 +317,7 @@ figure6 <- ggplot(plot_df, aes(x = Column, y = Genus_lab, fill = LFC)) +
                        breaks = seq(-floor(lim), floor(lim), by = 1)) +
   scale_x_discrete(position = "top") +
   coord_cartesian(clip = "off") +
-  labs(x = NULL, y = NULL) +
-        
+  labs(x = NULL, y = NULL) +   # symbol key is in the figure legend (manuscript), not in the image
   theme_minimal(base_size = 8) +
   theme(
     axis.text.x.top   = element_text(size = 7.5, color = "black"),
@@ -331,7 +357,7 @@ ggsave("Figure6_ANCOMBC2_Heatmap.svg", plot = figure6, width = 174, height = fig
 # 9. EXPORT RESULTS (consumed by Figure 7, Supp Fig S2, Supp Tables)
 # ============================================================
 
-write.csv(all_res, file.path(results_dir, "ANCOMBC2_all_results.csv"), row.names = FALSE)
+if (REFIT) write.csv(all_res, file.path(results_dir, "ANCOMBC2_all_results.csv"), row.names = FALSE)
 write.csv(da_tab,  file.path(results_dir, "ANCOMBC2_DA_taxa.csv"), row.names = FALSE)
 
 z <- fit_un$zero_ind
@@ -346,13 +372,13 @@ params <- data.frame(
   Parameter = c("Package", "Unadjusted formula", "Adjusted formula", "Reference group", "p_adj_method",
                 "FDR scope", "prv_cut", "lib_cut", "s0_perc", "struc_zero", "neg_lb", "pseudo_sens",
                 "alpha", "Significance rule", "Genera tested (unadjusted)", "Samples", "Seed"),
-  Value = c(paste("ANCOMBC", packageVersion("ANCOMBC")), "Status",
+  Value = c(paste("ANCOMBC", ANC_VER), "Status",
             paste(c("Status", ADJ_COVARS), collapse = " + "), "Healthy", ANC$p_adj_method,
             "Across genera, within each contrast", ANC$prv_cut, ANC$lib_cut, ANC$s0_perc,
             ANC$struc_zero, ANC$neg_lb, ANC$pseudo_sens, ANC$alpha,
             "q < 0.05 AND passed pseudo-count sensitivity analysis",
             fit_un$n_tested, ncol(counts), SEED))
-write.csv(params, file.path(results_dir, "ANCOMBC2_parameters.csv"), row.names = FALSE)
+if (REFIT) write.csv(params, file.path(results_dir, "ANCOMBC2_parameters.csv"), row.names = FALSE)
 
 # ============================================================
 # 10. SUMMARY
