@@ -59,7 +59,16 @@ setwd(get_script_dir())
 # Paths RELATIVE to this script's folder (figure files and tables are saved here)
 #   script : 16S_liver_disease/Figure_7/
 #   data   : Desktop/16S_reprocess/qiime2_analysis_v2/
-proj_dir    <- file.path("..", "..", "16S_reprocess")
+find_proj_dir <- function(name = "16S_reprocess") {   # walks up: works whether 16S_reprocess sits
+  d <- normalizePath(getwd())                          #   beside the code folder or inside it
+  repeat {
+    cand <- file.path(d, name)
+    if (dir.exists(cand)) return(cand)
+    up <- dirname(d); if (up == d) break; d <- up
+  }
+  stop("Could not find a '", name, "' folder above ", getwd())
+}
+proj_dir    <- find_proj_dir()
 data_dir    <- file.path(proj_dir, "qiime2_analysis_v2")
 counts_file <- file.path(data_dir, "Desq", "DeSeq_l6", "feature-table_L6.tsv")
 meta_file   <- file.path(proj_dir, "sample_metadata.tsv")
@@ -103,7 +112,9 @@ clean_genus <- function(taxon) {
   }
   paste0("Taxon_", substr(gsub("[^a-zA-Z0-9]", "", taxon), 1, 8))
 }
-clean_display <- function(name) gsub("_", " ", gsub("\\[|\\]", "", name))
+clean_display <- function(x) ifelse(grepl("^\\[[^]]*\\]$", x),          # whole name in [ ] = genus not assigned,
+  paste0(gsub("_", " ", gsub("^\\[|\\]$", "", x)), " (unclassified)"),   #   lowest assigned rank shown, e.g. Rhodospirillales (order)
+  gsub("_", " ", gsub("\\[|\\]", "", x)))
 
 # ========================================================================
 # 1. LOAD DATA
